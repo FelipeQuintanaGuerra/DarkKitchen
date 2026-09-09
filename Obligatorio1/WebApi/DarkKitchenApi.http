@@ -1,0 +1,6 @@
+@DarkKitchenApi_HostAddress = http://localhost:5128
+
+GET {{DarkKitchenApi_HostAddress}}/darkkitchen/
+Accept: application/json
+
+###

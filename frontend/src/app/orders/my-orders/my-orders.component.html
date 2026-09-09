@@ -1,0 +1,71 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Mis pedidos</h1>
+  </div>
+
+  <div class="filters-card">
+    <h2 class="section-title">Filtros</h2>
+    <div class="filters-row">
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <div class="input-wrapper select-wrapper">
+          <i class="material-icons">flag</i>
+          <select [(ngModel)]="request.status">
+            <option value="">Todos</option>
+            <option *ngFor="let status of statuses" [value]="status.value">
+              {{ status.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha desde</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="request.dateFrom" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha hasta</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="request.dateTo" />
+        </div>
+      </div>
+
+      <button type="button" class="btn-primary" (click)="search()">
+        <i class="material-icons">search</i>
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="table-container" *ngIf="orders.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Productos</th>
+          <th class="right-col">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders">
+          <td class="order-number">#{{ order.orderNumber }}</td>
+          <td>{{ order.createdAt | date:'dd/MM/yyyy' }}</td>
+          <td><span class="status-badge">{{ getStatusName(order.status) }}</span></td>
+          <td>{{ order.totalProducts }}</td>
+          <td class="right-col">${{ order.total }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Auditoría</h1>
+  </div>
+
+  <div class="filters-card">
+    <h2 class="section-title">Filtros de búsqueda</h2>
+
+    <div class="filters-grid">
+      <div class="form-group">
+        <label class="form-label">Fecha/hora desde</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="datetime-local" [(ngModel)]="request.dateFrom" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha/hora hasta</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="datetime-local" [(ngModel)]="request.dateTo" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Id entidad</label>
+        <div class="input-wrapper">
+          <i class="material-icons">tag</i>
+          <input type="text" [(ngModel)]="request.entityId" placeholder="Opcional" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Entidad</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="entityName" value="PRODUCTO" [(ngModel)]="request.entityName" />
+            <span>Producto</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="entityName" value="PROMOCION" [(ngModel)]="request.entityName" />
+            <span>Promoción</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters-actions">
+      <button type="button" class="btn-primary" (click)="search()">
+        <i class="material-icons">search</i>
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="table-container" *ngIf="logs.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha/Hora</th>
+          <th>Usuario</th>
+          <th>Entidad</th>
+          <th>Id entidad</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of logs">
+          <td>{{ log.time | date:'short' }}</td>
+          <td>{{ log.username }}</td>
+          <td>{{ log.entityName }}</td>
+          <td class="entity-id">{{ log.entityId }}</td>
+          <td>{{ log.description }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Importar productos</h1>
+  </div>
+
+  <div class="form-card">
+    <div class="form-group">
+      <label>Importador</label>
+      <div class="input-wrapper">
+        <i class="material-icons">extension</i>
+        <select [(ngModel)]="selectedImporter">
+          <option value="">Seleccioná un importador</option>
+          <option *ngFor="let name of importerNames" [value]="name">{{ name }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Ruta del archivo</label>
+      <div class="input-wrapper">
+        <i class="material-icons">folder_open</i>
+        <input type="text" [(ngModel)]="filePath" placeholder="Ej: C:\archivos\productos.json">
+      </div>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-message">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="successMessage" class="success-message">
+      {{ successMessage }}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-primary" (click)="import()">Importar</button>
+    </div>
+  </div>
+</div>

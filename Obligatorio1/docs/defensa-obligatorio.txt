@@ -1,0 +1,504 @@
+==========================================================================
+ GUÍA DE DEFENSA - OBLIGATORIO 1 (Diseño de Aplicaciones 2)
+ Temas: Backend (arquitectura) e Importers (Reflection / Plugins)
+==========================================================================
+
+Referencias de código:
+- IImporters/IProductImporter.cs         -> contrato del plugin
+- IImporters/ImportedProduct.cs          -> DTO de importación
+- BusinessLogic/Reflection/AssemblyLoader.cs   -> carga DLLs por reflection
+- BusinessLogic/Reflection/IAssemblyLoader.cs  -> abstracción inyectable
+- BusinessLogic/Services/ImporterService.cs    -> orquestación del import
+- WebApi/Controllers/ImporterController.cs     -> endpoints (solo Admin)
+- ServiceFactory/ServiceFactory.cs             -> registro de dependencias
+
+
+==========================================================================
+ PARTE 1 - IMPORTERS (REFLECTION / PLUGINS)
+==========================================================================
+
+--------------------------------------------------------------------------
+P1. ¿Por qué la interfaz IProductImporter está en un proyecto separado
+    (IImporters) y no dentro de Domain o BusinessLogic?
+--------------------------------------------------------------------------
+R: Para que un tercero pueda implementar un importer referenciando SOLO
+   ese contrato, sin arrastrar la lógica de negocio ni el dominio del
+   sistema. IImporters es el "contrato del plugin".
+   Aplica el principio DIP (Inversión de Dependencias): nuestra lógica
+   depende de la abstracción IProductImporter, no de implementaciones
+   concretas. Así el acoplamiento entre el sistema y los plugins es mínimo.
+
+--------------------------------------------------------------------------
+P2. ¿Cómo agrego un nuevo importer (por ej. JSON o XML) sin recompilar
+    todo el sistema? (PREGUNTA ESTRELLA - tenerla practicada para la demo)
+--------------------------------------------------------------------------
+R: 1) Creo un proyecto nuevo que referencia únicamente IImporters.
+   2) Implemento la interfaz IProductImporter (propiedad Name + método
+      GetProducts(path)).
+   3) Compilo el DLL y lo copio a la carpeta Plugins/.
+   4) El AssemblyLoader lo descubre automáticamente en runtime.
+   No se toca ni se recompila el código existente -> esto es el principio
+   Open/Closed (abierto a extensión, cerrado a modificación).
+
+--------------------------------------------------------------------------
+P3. ¿Por qué usar Reflection y no un switch o una factory con tipos
+    conocidos en tiempo de compilación?
+--------------------------------------------------------------------------
+R: Un switch/factory tradicional obliga a conocer TODOS los formatos en
+   tiempo de compilación y a recompilar el sistema cada vez que se agrega
+   uno nuevo. Reflection permite descubrir las implementaciones de
+   IProductImporter en runtime, leyendo los DLLs de la carpeta Plugins/.
+   Eso da extensibilidad real por plugins sin modificar el core.
+
+--------------------------------------------------------------------------
+P4. ¿Cómo se cargan los importers concretamente?
+--------------------------------------------------------------------------
+R: En AssemblyLoader.LoadImporters():
+   - Se listan los .dll de la carpeta Plugins/.
+   - Por cada DLL: Assembly.LoadFile() lo carga.
+   - Se buscan los tipos que sean clase y que implementen IProductImporter
+     (typeof(IProductImporter).IsAssignableFrom(t)).
+   - Activator.CreateInstance() crea una instancia de cada uno.
+   GetImporterNames() devuelve los Name; GetImporterByName() busca uno.
+
+--------------------------------------------------------------------------
+P5. ¿Cómo se testea ImporterService si depende de cargar DLLs físicos?
+--------------------------------------------------------------------------
+R: Por eso AssemblyLoader está detrás de la interfaz IAssemblyLoader, que
+   se inyecta en ImporterService. En los tests se mockea IAssemblyLoader y
+   se devuelven importers fake, sin tocar el filesystem.
+   AssemblyLoader (la implementación con reflection real) está marcado con
+   [ExcludeFromCodeCoverage] porque su lógica es infraestructura difícil
+   de testear unitariamente; la lógica de negocio testeable vive en el
+   service.
+
+--------------------------------------------------------------------------
+P6. ¿Qué pasa si dos importers tienen el mismo Name?
+--------------------------------------------------------------------------
+R: Hoy GetImporterByName usa FirstOrDefault, así que toma el primero que
+   encuentra silenciosamente. Es una limitación conocida; se podría validar
+   unicidad de nombres al cargar los plugins.
+
+--------------------------------------------------------------------------
+P7. ¿Qué hace exactamente ImporterService al importar un producto?
+--------------------------------------------------------------------------
+R: Por cada ImportedProduct que devuelve el importer:
+   - Verifica que el Code no exista ya (sino, error).
+   - Busca o crea la CommercialLine y la Category por nombre.
+   - Procesa imágenes: valida que existan, que sean .jpg y <= 500KB; las
+     copia con un nombre único (Guid) a wwwroot/images/products.
+   - Si no quedó ninguna imagen válida, falla.
+   - Crea el Product y lo persiste.
+   Devuelve la cantidad de productos importados.
+
+--------------------------------------------------------------------------
+P8. ¿Por qué ImportedProduct es una clase aparte y no la entidad Product
+    del dominio?
+--------------------------------------------------------------------------
+R: Para desacoplar el formato de entrada del modelo de dominio. El plugin
+   solo conoce un DTO plano (Code, Name, Price, nombres de línea/categoría,
+   rutas de imágenes). El service traduce ese DTO a entidades de dominio
+   ricas (Product, CommercialLine, Category, ProductPicture) aplicando las
+   reglas de negocio. El plugin no necesita conocer el dominio.
+
+
+==========================================================================
+ PARTE 2 - BACKEND (ARQUITECTURA)
+==========================================================================
+
+--------------------------------------------------------------------------
+P9. ¿Cómo está organizada la arquitectura en capas?
+--------------------------------------------------------------------------
+R: Capas con dependencia hacia abstracciones:
+   WebApi -> BusinessLogic (via IBussinesLogic) -> Repository (via
+   IRepository) -> Domain.
+   Cada capa depende de la INTERFAZ de la siguiente, no de su
+   implementación. DTOs y Domain son transversales. ServiceFactory
+   centraliza el armado de dependencias.
+
+--------------------------------------------------------------------------
+P10. ¿Por qué ServiceFactory está en su propio proyecto?
+--------------------------------------------------------------------------
+R: Para centralizar el registro de dependencias (DI) en un único lugar y
+   que WebApi NO tenga que conocer las implementaciones concretas
+   (BusinessLogic, Repository). El Program.cs solo invoca
+   ServiceFactory.RegisterServices(...). Así WebApi depende de interfaces.
+
+--------------------------------------------------------------------------
+P11. ¿Por qué hay un IGenericRepository<> y además repositorios
+     específicos (IProductRepository, IOrderRepository, etc.)?
+--------------------------------------------------------------------------
+R: El genérico resuelve el CRUD común a todas las entidades (Add, GetBy,
+   etc.) evitando duplicación (DRY). Los repositorios específicos agregan
+   queries propias de cada agregado que el genérico no cubre. Se inyectan
+   con: services.AddScoped(typeof(IGenericRepository<>),
+   typeof(GenericRepository<>)).
+
+--------------------------------------------------------------------------
+P12. ¿Cómo se controla que solo un Admin pueda importar?
+--------------------------------------------------------------------------
+R: Con un filtro de autorización custom: el atributo
+   [AuthorizationFilter([Role.Admin])] sobre los endpoints del
+   ImporterController. El filtro valida el token/sesión del usuario y su
+   rol antes de ejecutar la acción. Si no es Admin, corta la request.
+
+--------------------------------------------------------------------------
+P13. ¿Por qué usar DTOs y Mappers en lugar de exponer las entidades de
+     Domain directamente en los controllers?
+--------------------------------------------------------------------------
+R: Para desacoplar el contrato HTTP (lo que entra/sale por la API) del
+   modelo de dominio interno. Así puedo cambiar el dominio sin romper la
+   API (y viceversa), evito exponer datos sensibles o internos, y controlo
+   exactamente la forma del request/response. Los Mappers traducen entre
+   DTO y entidad.
+
+--------------------------------------------------------------------------
+P14. ¿Qué es EnableRetryOnFailure(3) en el DbContext?
+--------------------------------------------------------------------------
+R: Resiliencia ante fallos transitorios de SQL Server (timeouts, caídas
+   momentáneas de conexión). EF Core reintenta hasta 3 veces antes de
+   fallar definitivamente. Está configurado en ServiceFactory al registrar
+   el AppDbContext.
+
+--------------------------------------------------------------------------
+P15. ¿Por qué los servicios y repos se registran como Scoped?
+--------------------------------------------------------------------------
+R: Scoped = una instancia por request HTTP. Es lo correcto para servicios
+   que usan el DbContext (que también es Scoped), garantizando que toda la
+   request comparta el mismo contexto/unidad de trabajo y que no se
+   compartan estados entre requests distintas.
+
+
+==========================================================================
+ PARTE 3 - PUNTOS DÉBILES (DONDE VAN A APRETAR) + CÓMO RESPONDER
+==========================================================================
+
+--------------------------------------------------------------------------
+D1. El filePath llega por [FromQuery] y se usa directo contra el
+    filesystem (ImporterController.ImportProducts).
+--------------------------------------------------------------------------
+RIESGO: Path traversal / lectura de rutas arbitrarias del servidor
+        (ej: ../../algo). Un atacante podría apuntar a archivos del host.
+QUÉ DECIR: "Es un riesgo que reconocemos. La mitigación adecuada sería
+        validar y restringir (sandbox) el path a un directorio permitido,
+        rechazando rutas relativas o fuera de la carpeta de imports.
+        En el contexto actual el endpoint está protegido y solo accesible
+        por un Admin autenticado, lo que reduce la superficie, pero la
+        validación del path es una mejora pendiente."
+
+--------------------------------------------------------------------------
+D2. Assembly.LoadFile carga y ejecuta código de CUALQUIER DLL en Plugins/.
+--------------------------------------------------------------------------
+RIESGO: Si alguien deja un DLL malicioso en Plugins/, se ejecuta código
+        arbitrario en el servidor.
+QUÉ DECIR: "El modelo de confianza asume que solo un Admin con acceso al
+        servidor puede depositar DLLs en la carpeta Plugins/. Es el mismo
+        modelo que cualquier sistema de plugins (depende de la confianza
+        en la fuente del plugin). Como mejora se podría firmar los
+        assemblies o validar una firma/whitelist antes de cargarlos."
+
+--------------------------------------------------------------------------
+D3. La importación NO es transaccional.
+--------------------------------------------------------------------------
+PROBLEMA: En ImporterService.ImportProducts, si el producto N falla
+        (código duplicado o sin imágenes válidas) se lanza la excepción
+        DESPUÉS de haber agregado productos, líneas comerciales y
+        categorías anteriores. La base puede quedar a medias.
+QUÉ DECIR: "Es una limitación de diseño que identificamos. Lo correcto
+        sería envolver todo el ImportProducts en una transacción (o un
+        único SaveChanges atómico / unit of work), de modo que si falla
+        cualquier producto se haga rollback de todo el import y la BD
+        quede consistente. Hoy cada Add impacta de forma incremental."
+NOTA: Si te preguntan "¿y si querés import parcial?" -> decir que sería
+        una decisión de negocio: o todo-o-nada (transacción) o reportar
+        cuáles fallaron y seguir; hoy no está definido explícitamente.
+
+--------------------------------------------------------------------------
+D4. throw new Exception(...) genérico cuando el importer no existe
+    (ImporterService línea ~44).
+--------------------------------------------------------------------------
+PROBLEMA: Excepción genérica vs. el resto del código que usa
+        ArgumentException (más específica).
+QUÉ DECIR: "Es una inconsistencia menor. Debería ser una excepción más
+        específica y semántica (ej. KeyNotFoundException o una excepción
+        de dominio propia tipo ImporterNotFoundException) para que el
+        controller la pueda mapear a un 404/400 correcto."
+
+--------------------------------------------------------------------------
+D5. Las reglas de imágenes (.jpg, <=500KB) están hardcodeadas dentro del
+    ImporterService.
+--------------------------------------------------------------------------
+PREGUNTA TÍPICA: "¿Por qué la validación de la imagen está en el service
+        y no en el dominio (ProductPicture)?"
+QUÉ DECIR: "Idealmente la regla de qué es una imagen válida (formato y
+        tamaño) debería estar en el dominio, en ProductPicture, para que
+        la invariante se cumpla siempre, sin importar quién cree la
+        imagen. Hoy está en el service del import, lo que la deja fuera
+        del dominio y la podría duplicar otra parte del sistema. Es un
+        candidato a refactor para fortalecer el modelo de dominio."
+
+--------------------------------------------------------------------------
+D6. Las imágenes inválidas se saltean en silencio (continue) y recién
+    falla si quedan 0 imágenes válidas.
+--------------------------------------------------------------------------
+PROBLEMA: Si una imagen no existe o supera 500KB se hace 'continue' sin
+        avisar; el usuario no se entera de qué imágenes se descartaron.
+QUÉ DECIR: "Es una decisión de comportamiento: priorizamos importar el
+        producto si tiene al menos una imagen válida. La contra es que el
+        descarte es silencioso. Una mejora sería devolver un reporte de
+        qué imágenes se omitieron y por qué, para dar feedback al Admin."
+
+--------------------------------------------------------------------------
+D7. (Posible) GetImporterNames y GetImporterByName llaman LoadImporters()
+    cada vez -> recargan los DLLs en cada llamada.
+--------------------------------------------------------------------------
+PROBLEMA: Ineficiencia (se relee la carpeta y se recargan assemblies en
+        cada request) y posible bloqueo del DLL en disco.
+QUÉ DECIR: "Se podría cachear la lista de importers cargados una sola vez,
+        en vez de recargar en cada llamada. Hoy se prioriza simplicidad y
+        que siempre refleje los plugins actuales de la carpeta."
+
+
+==========================================================================
+ PARTE 4 - PATRÓN STATE (CICLO DE VIDA DE LA ORDEN)
+==========================================================================
+Archivos: Domain/Entities/OrderState.cs (abstracta) + PendingOrderState,
+PreparedOrderState, InTransitOrderState, DeliveredOrderState,
+NotDeliveredOrderState, DelayedOrderState, CancelledOrderState.
+Order.cs mantiene un _state y un StateFactory (diccionario
+OrderStatus -> función que crea el estado).
+
+--------------------------------------------------------------------------
+P16. ¿Qué patrón usaron para el ciclo de vida de la orden y por qué?
+--------------------------------------------------------------------------
+R: El patrón State. Cada estado (Pending, Prepared, InTransit, Delivered,
+   NotDelivered, Delayed, Cancelled) es una clase que hereda de OrderState
+   y define qué transiciones son válidas desde él. La Order delega las
+   acciones (Prepare, Cancel, Deliver, etc.) a su estado actual.
+   Beneficio: las reglas de transición quedan distribuidas en cada estado
+   y no en un switch gigante. Agregar/cambiar un estado no obliga a tocar
+   los demás (Open/Closed).
+
+--------------------------------------------------------------------------
+P17. ¿Cómo se evita una transición inválida (ej. entregar un pedido
+     cancelado)?
+--------------------------------------------------------------------------
+R: La clase base OrderState implementa TODAS las acciones lanzando
+   ConflictException ("El pedido en estado X no puede ser..."). Cada estado
+   concreto sobrescribe SOLO las transiciones que sí son válidas desde él.
+   Si se llama una acción no permitida, se ejecuta la versión base y tira
+   la excepción. Es un "default deny": lo no permitido falla por diseño.
+
+--------------------------------------------------------------------------
+P18. ¿Para qué sirve el StateFactory (diccionario) en Order?
+--------------------------------------------------------------------------
+R: Para reconstruir el objeto-estado a partir del OrderStatus persistido en
+   la base. Como en la BD se guarda el enum Status (un dato simple), al
+   cargar la orden el factory mapea ese enum a la instancia de OrderState
+   correspondiente. Evita un switch repetido y centraliza la creación.
+
+--------------------------------------------------------------------------
+P19. ¿Por qué la lógica de transición está en el dominio y no en el
+     OrderService?
+--------------------------------------------------------------------------
+R: Porque es una invariante del negocio (la orden NUNCA debe poder estar en
+   una transición inválida), y eso debe vivir en el dominio para cumplirse
+   siempre, sin importar quién la invoque. El service solo orquesta
+   (carga la orden, llama Prepare/Cancel, persiste). Es dominio rico, no
+   anémico.
+
+
+==========================================================================
+ PARTE 5 - SEGURIDAD Y AUTORIZACIÓN
+==========================================================================
+Archivos: WebApi/Authorization/AuthorizationFilter.cs,
+AuthorizationFilterAttribute.cs, BusinessLogic/Services/SessionService.cs,
+Domain/Entities/User.cs, Session.cs.
+
+--------------------------------------------------------------------------
+P20. ¿Cómo funciona la autorización por roles?
+--------------------------------------------------------------------------
+R: Con un IAuthorizationFilter custom (AuthorizationFilter). El atributo
+   [AuthorizationFilter([Role.Admin])] se aplica al endpoint. El filtro:
+   1) lee el header Authorization y parsea el token (Guid),
+   2) busca la sesión por token en el SessionRepository,
+   3) si no hay token/sesión -> 401 Unauthorized,
+   4) si el rol del usuario no está en los permitidos -> 403 Forbidden.
+   Si la lista de roles está vacía, solo exige estar autenticado.
+
+--------------------------------------------------------------------------
+P21. ¿Por qué un AuthorizationFilterAttribute que hereda de
+     TypeFilterAttribute en vez de instanciar el filtro directo?
+--------------------------------------------------------------------------
+R: Porque el filtro necesita inyección de dependencias (el
+   ISessionRepository). Un atributo común no puede recibir servicios por DI.
+   TypeFilterAttribute le dice a ASP.NET que cree el filtro resolviendo sus
+   dependencias del contenedor, pasándole los roles como argumento. Así el
+   filtro queda testeable y desacoplado del repositorio concreto.
+
+--------------------------------------------------------------------------
+P22. ¿Cómo se guardan las contraseñas? (pregunta de seguridad muy probable)
+--------------------------------------------------------------------------
+R: NO se guardan en texto plano. Se hashean con PBKDF2
+   (Rfc2898DeriveBytes) con SHA256, un salt por usuario y 100.000
+   iteraciones (User.HashPassword). Al hacer login se hashea la contraseña
+   ingresada con el mismo salt y se compara contra el hash guardado
+   (VerifyPassword). El salt evita ataques con rainbow tables y las
+   100k iteraciones encarecen el fuerza bruta.
+
+--------------------------------------------------------------------------
+P23. ¿Qué es el token y cómo se invalida?
+--------------------------------------------------------------------------
+R: Al hacer login se crea una Session con un Token (Guid) que se persiste.
+   Ese token viaja en el header Authorization en cada request protegida.
+   En el logout se elimina la sesión del repositorio (Remove(token)),
+   invalidándolo. (Limitación: el token no expira por tiempo; ver mejoras.)
+
+
+==========================================================================
+ PARTE 6 - DOMINIO RICO / ENCAPSULACIÓN
+==========================================================================
+--------------------------------------------------------------------------
+P24. ¿Por qué las propiedades tienen private set y las validaciones están
+     en el constructor de las entidades?
+--------------------------------------------------------------------------
+R: Para garantizar que una entidad NUNCA exista en un estado inválido. El
+   constructor valida todo (ej. Promotion valida nombre, fechas, descuento,
+   línea comercial) y los setters privados impiden que código externo deje
+   el objeto inconsistente después. Las reglas de negocio viven en el
+   dominio, no en el service -> dominio rico, no anémico.
+
+--------------------------------------------------------------------------
+P25. ¿Por qué hay un constructor privado sin parámetros con
+     [ExcludeFromCodeCoverage] en las entidades?
+--------------------------------------------------------------------------
+R: Lo exige EF Core para poder materializar la entidad al leer de la BD
+   (necesita un ctor sin parámetros). Es de uso exclusivo del ORM, no de la
+   lógica, por eso se excluye de cobertura: no tiene lógica que testear.
+
+--------------------------------------------------------------------------
+P26. (Promociones) ¿Cómo se asegura que una promoción sea coherente?
+--------------------------------------------------------------------------
+R: La entidad Promotion valida en el constructor y en AddProduct que TODOS
+   los productos pertenezcan a la misma línea comercial de la promoción, que
+   no se repitan, y valida fechas (inicio < fin) y rango de descuento. Son
+   invariantes que el dominio protege; el service no puede saltearlas.
+
+--------------------------------------------------------------------------
+P27. ¿Por qué exponen Lines como IReadOnlyCollection en Order?
+--------------------------------------------------------------------------
+R: Para que nadie modifique las líneas de la orden por fuera (no se puede
+   hacer .Add() sobre una IReadOnlyCollection). La lista interna es privada
+   y solo se modifica por métodos controlados de la entidad. Encapsulación.
+
+
+==========================================================================
+ PARTE 7 - AUDITORÍA, EXCEPCIONES Y EF CORE
+==========================================================================
+--------------------------------------------------------------------------
+P28. ¿Para qué sirve el AuditLogger y cómo se registra?
+--------------------------------------------------------------------------
+R: Registra acciones relevantes (quién, qué acción, sobre qué entidad,
+   cuándo) para trazabilidad. AuditLoggerService.LogAsync arma la
+   descripción y persiste un AuditLogger. Search permite filtrar por rango
+   de fechas (validando From < To). El AuditController expone la consulta
+   (protegida por rol).
+
+--------------------------------------------------------------------------
+P29. ¿Por qué crearon ConflictException propia en vez de usar Exception?
+--------------------------------------------------------------------------
+R: Para tener excepciones de DOMINIO semánticas. ConflictException
+   representa "la operación choca con el estado actual" (ej. transición de
+   orden inválida). Permite que la WebApi la mapee a un HTTP 409 Conflict
+   correcto, separando errores de negocio de errores técnicos. (Ojo: ver
+   D4 en puntos débiles, en ImporterService todavía hay un Exception
+   genérico que conviene reemplazar.)
+
+--------------------------------------------------------------------------
+P30. ¿Cómo se mapea el patrón State a la base con EF Core?
+--------------------------------------------------------------------------
+R: No se persiste el objeto OrderState (es comportamiento). Se persiste el
+   enum Status. Al reconstruir la orden, el StateFactory traduce ese Status
+   al OrderState concreto. Así el dominio mantiene los objetos-estado y la
+   BD guarda solo un dato simple.
+
+--------------------------------------------------------------------------
+P31. ¿Por qué usan migraciones de EF Core y cómo se versiona el esquema?
+--------------------------------------------------------------------------
+R: Cada cambio de modelo genera una migración (ej. AddPromotions,
+   AddShippingTypes, AddAuditLoggerEntityFields) versionada en
+   Repository/Migrations. Permite evolucionar el esquema de forma
+   incremental y reproducible (dotnet ef database update) y revertir si
+   hace falta. Es el historial del esquema bajo control de versiones.
+
+--------------------------------------------------------------------------
+P32. ¿Cómo calculan el total de una orden (impuestos, envío, promos)?
+--------------------------------------------------------------------------
+R: La Order calcula Subtotal a partir de sus OrderLine, aplica el impuesto
+   (TaxMultiplier = 1.22, IVA 22%) y suma el ShippingCost del ShippingType.
+   Todo el cálculo vive en el dominio para que sea consistente. (Si te
+   preguntan por promociones en el total, explicá cómo se aplica el
+   descuento de la línea comercial correspondiente.)
+
+
+==========================================================================
+ PARTE 8 - PREGUNTAS TRANSVERSALES / "DE PIZARRÓN"
+==========================================================================
+--------------------------------------------------------------------------
+P33. Si tuvieras que agregar una feature nueva mañana, ¿por dónde empezás?
+--------------------------------------------------------------------------
+R: Defino el contrato (interfaz en IBussinesLogic/IRepository), la entidad
+   o cambios de dominio con sus invariantes, implemento service + repo,
+   expongo el endpoint con su DTO y autorización, registro en ServiceFactory
+   y escribo tests por capa. De afuera hacia el dominio respetando las
+   interfaces.
+
+--------------------------------------------------------------------------
+P34. ¿Cómo testean cada capa? ¿Qué mockean?
+--------------------------------------------------------------------------
+R: Tests por capa: DomainTests (entidades e invariantes, sin mocks),
+   BussinesLogicTests (services mockeando repositorios e interfaces de
+   infraestructura), WebApiTests (controllers mockeando services),
+   RepositoryTests (acceso a datos). Se mockea siempre la capa de abajo
+   gracias a que todo está detrás de interfaces.
+
+--------------------------------------------------------------------------
+P35. ¿Qué pasa con la concurrencia? (dos admins importando/operando a la vez)
+--------------------------------------------------------------------------
+R: Hoy no hay control de concurrencia optimista (no hay rowversion/
+   timestamp). En operaciones simultáneas sobre la misma entidad podría
+   haber condiciones de carrera. Como mejora se agregaría un token de
+   concurrencia de EF Core. Reconocelo si te lo preguntan.
+
+--------------------------------------------------------------------------
+P36. ¿Por qué tantos proyectos/assemblies en la solución?
+--------------------------------------------------------------------------
+R: Para forzar las dependencias en una sola dirección y separar
+   responsabilidades: Domain no depende de nadie; las interfaces
+   (IBussinesLogic, IRepository, IImporters) permiten que las capas
+   dependan de abstracciones; WebApi no referencia implementaciones, solo
+   ServiceFactory las cablea. La estructura de proyectos hace IMPOSIBLE
+   violar la arquitectura por error (no compila).
+
+
+==========================================================================
+ CIERRE - PRINCIPIOS QUE CONVIENE NOMBRAR EN LA DEFENSA
+==========================================================================
+- SOLID:
+    * SRP: cada service/repo una responsabilidad.
+    * OCP: agregar importers sin modificar el core (plugins).
+    * DIP: todo depende de interfaces (IProductImporter, IAssemblyLoader,
+      IRepository, IBussinesLogic).
+- Inyección de dependencias centralizada en ServiceFactory.
+- Patrón Repository (genérico + específicos).
+- Patrón State (ciclo de vida de la Order) + Factory para reconstruir
+  estados desde el enum persistido.
+- Dominio rico: invariantes en el constructor, private setters,
+  colecciones de solo lectura, excepciones de dominio (ConflictException).
+- Seguridad: passwords con PBKDF2+salt+100k iteraciones, autorización por
+  roles con filtro custom (TypeFilter con DI).
+- Separación en capas y uso de DTOs/Mappers para desacoplar la API del
+  dominio.
+- Testabilidad: las dependencias de infraestructura están detrás de
+  interfaces mockeables.
+==========================================================================

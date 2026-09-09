@@ -1,0 +1,173 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Pedidos filtrados</h1>
+  </div>
+
+  <div class="filters-card">
+    <h2 class="section-title">Filtros</h2>
+    <div class="filters-grid">
+      <div class="form-group">
+        <label class="form-label">Fecha desde</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="request.dateFrom" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha hasta</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="request.dateTo" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <div class="input-wrapper select-wrapper">
+          <i class="material-icons">flag</i>
+          <select [(ngModel)]="request.status">
+            <option value="">Todos</option>
+            <option *ngFor="let status of statuses" [value]="status.value">
+              {{ status.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label"
+          >Dirección <span class="optional">(opcional)</span></label
+        >
+        <div class="input-wrapper">
+          <i class="material-icons">location_on</i>
+          <input
+            type="text"
+            [(ngModel)]="request.address"
+            placeholder="Buscar por dirección"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="filters-actions">
+      <button type="button" class="btn-primary" (click)="search()">
+        <i class="material-icons">search</i>
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="table-container" *ngIf="orders.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Email cliente</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Productos</th>
+          <th class="right-col">Total</th>
+          <th>Detalle</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr
+          *ngFor="let order of orders"
+          [class.selected]="selectedOrder?.orderNumber === order.orderNumber"
+        >
+          <td class="order-number">#{{ order.orderNumber }}</td>
+          <td>{{ order.customerEmail }}</td>
+          <td>{{ order.createdAt | date: "dd/MM/yyyy" }}</td>
+          <td>
+            <span class="status-badge">{{ getStatusName(order.status) }}</span>
+          </td>
+          <td>{{ order.totalProducts }}</td>
+          <td class="right-col">${{ order.total }}</td>
+
+          <td class="action-col">
+            <button
+              type="button"
+              class="btn-detail"
+              (click)="loadDetail(order.orderNumber)"
+              title="Ver detalle"
+            >
+              <i class="material-icons">visibility</i>
+            </button>
+          </td>
+
+          <td class="actions-cell">
+            <div class="actions-wrapper">
+              <button
+                type="button"
+                class="btn-action"
+                *ngIf="canPrepare(order.status)"
+                (click)="executeAction(order, 0)"
+              >
+                Preparar
+              </button>
+
+              <button
+                type="button"
+                class="btn-action btn-danger"
+                *ngIf="canCancel(order.status)"
+                (click)="executeAction(order, 1)"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                class="btn-action"
+                *ngIf="canDelay(order.status)"
+                (click)="executeAction(order, 5)"
+              >
+                Demorar
+              </button>
+
+              <button
+                type="button"
+                class="btn-action"
+                *ngIf="canMarkAsInTransit(order.status)"
+                (click)="executeAction(order, 2)"
+              >
+                En camino
+              </button>
+
+              <button
+                type="button"
+                class="btn-action"
+                *ngIf="canDeliver(order.status)"
+                (click)="executeAction(order, 3)"
+              >
+                Entregado
+              </button>
+
+              <button
+                type="button"
+                class="btn-action btn-danger"
+                *ngIf="canMarkAsNotDelivered(order.status)"
+                (click)="executeAction(order, 4)"
+              >
+                No entregado
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="detail-section" *ngIf="selectedOrder">
+    <app-order-detail
+      [order]="selectedOrder"
+      [showSearch]="false"
+    ></app-order-detail>
+  </div>
+</div>

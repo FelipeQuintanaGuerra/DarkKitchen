@@ -1,0 +1,24 @@
+[
+  {
+    "Code": "JSON001",
+    "Name": "Teclado mecanico RGB",
+    "Description": "Teclado mecanico con switches azules e iluminacion RGB",
+    "Price": 1890.00,
+    "CommercialLineName": "Tecnologia",
+    "CategoryName": "Perifericos",
+    "ImagePaths": [
+      "/home/felipe/College/Semestre6/Diseno2/Obligatorio1Nuevo/Obligatorio1/WebApi/wwwroot/images/products/1053631a-d788-4482-b276-def7307a2cdd.jpg"
+    ]
+  },
+  {
+    "Code": "JSON002",
+    "Name": "Auriculares inalambricos",
+    "Description": "Auriculares bluetooth con cancelacion de ruido",
+    "Price": 2450.50,
+    "CommercialLineName": "Tecnologia",
+    "CategoryName": "Audio",
+    "ImagePaths": [
+      "/home/felipe/College/Semestre6/Diseno2/Obligatorio1Nuevo/Obligatorio1/WebApi/wwwroot/images/products/2a270f57-c73a-4781-bd86-eb46b340bdc1.jpg"
+    ]
+  }
+]

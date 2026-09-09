@@ -1,0 +1,152 @@
+@startuml 05-mer
+' Modelo Entidad-Relación (MER) — Base de datos DarkKitchen
+' Generado a partir del esquema real de EF Core (AppDbContextModelSnapshot).
+' Notación: pie de gallo (crow's foot). PK = clave primaria, FK = clave foránea, U = único.
+
+skinparam linetype ortho
+hide circle
+skinparam classAttributeIconSize 0
+
+title MER — Base de datos DarkKitchen (SQL Server)
+
+entity "Users" as Users {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * Name : nvarchar
+    * Surname : nvarchar
+    * Email : nvarchar(450) <<U>>
+    * Phone : nvarchar
+    * Password : nvarchar
+    * Salt : nvarchar
+    * Role : int
+    * IsInternal : bit
+    * IsActive : bit
+}
+
+entity "Sessions" as Sessions {
+    * Token : uniqueidentifier <<PK>>
+    --
+    * UserId : uniqueidentifier <<FK>>
+}
+
+entity "Orders" as Orders {
+    * OrderNumber : uniqueidentifier <<PK>>
+    --
+    * CustomerId : uniqueidentifier <<FK>>
+    * ShippingTypeId : uniqueidentifier <<FK>>
+    * CreatedAt : datetime2
+    * Status : int
+    * Subtotal : decimal(18,2)
+    * ShippingCost : decimal(18,2)
+    * Total : decimal(18,2)
+    .. DeliveryAddress (owned) ..
+    * Street : nvarchar
+    * DoorNumber : nvarchar
+    * Apartment : nvarchar
+}
+
+entity "OrderLines" as OrderLines {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * OrderNumber : uniqueidentifier <<FK>>
+    * ProductId : uniqueidentifier <<FK>>
+    * Quantity : int
+    * UnitPrice : decimal(18,2)
+    * Discount : decimal(18,2)
+}
+
+entity "ShippingTypes" as ShippingTypes {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * Name : nvarchar(450) <<U>>
+    * Cost : decimal(18,2)
+    * IsDefault : bit
+}
+
+entity "Products" as Products {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * CommercialLineId : uniqueidentifier <<FK>>
+    * CategoryId : uniqueidentifier <<FK>>
+    * Code : nvarchar
+    * Name : nvarchar
+    * Description : nvarchar
+    * Price : decimal(18,2)
+    * IsActive : bit
+}
+
+entity "ProductPictures" as ProductPictures {
+    * Id : uniqueidentifier <<PK>>
+    --
+    o ProductId : uniqueidentifier <<FK>>
+    * FileName : nvarchar
+    * SizeInKb : int
+}
+
+entity "Categories" as Categories {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * Name : nvarchar
+}
+
+entity "CommercialLines" as CommercialLines {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * Name : nvarchar
+}
+
+entity "Promotions" as Promotions {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * CommercialLineId : uniqueidentifier <<FK>>
+    * Name : nvarchar
+    * StartDate : datetime2
+    * EndDate : datetime2
+    * Discount : int
+}
+
+entity "PromotionProducts" as PromotionProducts {
+    * ProductsId : uniqueidentifier <<PK,FK>>
+    * PromotionId : uniqueidentifier <<PK,FK>>
+}
+
+entity "AuditLoggers" as AuditLoggers {
+    * Id : uniqueidentifier <<PK>>
+    --
+    * Username : nvarchar
+    * Action : nvarchar
+    * Time : datetime2
+    o EntityName : nvarchar
+    o EntityId : uniqueidentifier
+    o Description : nvarchar
+}
+
+' ===================== Relaciones =====================
+' 1 a muchos (||--o{)
+Users           ||--o{ Orders          : "realiza (CustomerId)"
+Users           ||--o{ Sessions        : "tiene (UserId)"
+ShippingTypes   ||--o{ Orders          : "aplica a (ShippingTypeId)"
+Orders          ||--o{ OrderLines      : "contiene (OrderNumber)"
+Products        ||--o{ OrderLines      : "referenciado por (ProductId)"
+Categories      ||--o{ Products        : "clasifica (CategoryId)"
+CommercialLines ||--o{ Products        : "agrupa (CommercialLineId)"
+CommercialLines ||--o{ Promotions      : "agrupa (CommercialLineId)"
+Products        ||--o{ ProductPictures : "tiene (ProductId)"
+
+' Muchos a muchos resuelto con tabla puente
+Products        ||--o{ PromotionProducts
+Promotions      ||--o{ PromotionProducts
+
+note bottom of AuditLoggers
+  Tabla independiente (sin FK).
+  EntityId / EntityName son referencias "blandas"
+  a la entidad auditada, no claves foráneas.
+end note
+
+note bottom of Orders
+  Street / DoorNumber / Apartment provienen del
+  value object DeliveryAddress (owned entity de EF Core);
+  se almacenan como columnas de la propia tabla Orders.
+end note
+
+@enduml

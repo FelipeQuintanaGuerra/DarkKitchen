@@ -1,0 +1,93 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/products" class="btn-back">
+      <i class="material-icons">arrow_back</i>
+    </a>
+    <h1>Crear producto</h1>
+  </div>
+
+  <div class="form-card">
+    <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Código</label>
+          <div class="input-wrapper">
+            <i class="material-icons">tag</i>
+            <input type="text" formControlName="code" placeholder="Código del producto">
+          </div>
+          <span class="field-error" *ngIf="productForm.get('code')?.touched && productForm.get('code')?.hasError('required')">El código es requerido</span>
+        </div>
+
+        <div class="form-group">
+          <label>Nombre</label>
+          <div class="input-wrapper">
+            <i class="material-icons">shopping_cart</i>
+            <input type="text" formControlName="name" placeholder="Nombre del producto">
+          </div>
+          <span class="field-error" *ngIf="productForm.get('name')?.touched && productForm.get('name')?.hasError('required')">El nombre es requerido</span>
+          <span class="field-error" *ngIf="productForm.get('name')?.touched && productForm.get('name')?.hasError('minlength')">Mínimo 3 caracteres</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción</label>
+        <div class="input-wrapper textarea-wrapper">
+          <textarea formControlName="description" placeholder="Descripción del producto" rows="4"></textarea>
+        </div>
+        <span class="field-error" *ngIf="productForm.get('description')?.touched && productForm.get('description')?.hasError('required')">La descripción es requerida</span>
+        <span class="field-error" *ngIf="productForm.get('description')?.touched && productForm.get('description')?.hasError('minlength')">Mínimo 10 caracteres</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Precio</label>
+          <div class="input-wrapper">
+            <i class="material-icons">attach_money</i>
+            <input type="number" formControlName="price" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <span class="field-error" *ngIf="productForm.get('price')?.touched && productForm.get('price')?.hasError('required')">El precio es requerido</span>
+          <span class="field-error" *ngIf="productForm.get('price')?.touched && productForm.get('price')?.hasError('min')">El precio debe ser mayor a 0</span>
+        </div>
+
+        <div class="form-group">
+          <label>Línea comercial</label>
+          <div class="input-wrapper">
+            <i class="material-icons">category</i>
+            <input type="text" formControlName="commercialLineName" placeholder="Nombre de la línea">
+          </div>
+          <span class="field-error" *ngIf="productForm.get('commercialLineName')?.touched && productForm.get('commercialLineName')?.hasError('required')">La línea comercial es requerida</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoría</label>
+          <div class="input-wrapper">
+            <i class="material-icons">label</i>
+            <input type="text" formControlName="categoryName" placeholder="Nombre de la categoría">
+          </div>
+          <span class="field-error" *ngIf="productForm.get('categoryName')?.touched && productForm.get('categoryName')?.hasError('required')">La categoría es requerida</span>
+        </div>
+
+        <div class="form-group">
+          <label>Imágenes</label>
+          <div class="input-wrapper file-wrapper">
+            <i class="material-icons">image</i>
+            <input type="file" multiple accept="image/*" (change)="onFileSelected($event)">
+          </div>
+          <span class="field-info" *ngIf="selectedFiles.length > 0">{{ selectedFiles.length }} imagen(s) seleccionada(s)</span>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <div class="form-actions">
+        <a routerLink="/products" class="btn-cancel">Cancelar</a>
+        <button type="submit" class="btn-primary">Crear producto</button>
+      </div>
+    </form>
+  </div>
+</div>
+

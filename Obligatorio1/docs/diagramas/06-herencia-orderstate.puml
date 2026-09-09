@@ -1,0 +1,79 @@
+@startuml 06-herencia-orderstate
+' Jerarquía de herencias — OrderState (patrón State)
+' Sección 3.1 de la documentación.
+
+skinparam classAttributeIconSize 0
+title Jerarquía de herencias — OrderState (patrón State)
+
+abstract class OrderState {
+    # Order Order
+    + {abstract} Status : OrderStatus
+    --
+    + {method} Prepare() : void
+    + {method} Cancel() : void
+    + {method} MarkAsInTransit() : void
+    + {method} Deliver() : void
+    + {method} MarkAsNotDelivered() : void
+    + {method} Delay() : void
+    .. por defecto lanzan ConflictException ..
+}
+
+class PendingOrderState {
+    + Status = Pending
+    --
+    + Prepare()  --> Prepared
+    + Cancel()   --> Cancelled
+    + Delay()    --> Delayed
+}
+
+class PreparedOrderState {
+    + Status = Prepared
+    --
+    + MarkAsInTransit() --> InTransit
+}
+
+class InTransitOrderState {
+    + Status = InTransit
+    --
+    + Deliver()            --> Delivered
+    + MarkAsNotDelivered() --> NotDelivered
+}
+
+class DelayedOrderState {
+    + Status = Delayed
+    --
+    + Prepare() --> Prepared
+    + Cancel()  --> Cancelled
+}
+
+class DeliveredOrderState {
+    + Status = Delivered
+    .. estado terminal ..
+}
+
+class NotDeliveredOrderState {
+    + Status = NotDelivered
+    .. estado terminal ..
+}
+
+class CancelledOrderState {
+    + Status = Cancelled
+    .. estado terminal ..
+}
+
+OrderState <|-- PendingOrderState
+OrderState <|-- PreparedOrderState
+OrderState <|-- InTransitOrderState
+OrderState <|-- DelayedOrderState
+OrderState <|-- DeliveredOrderState
+OrderState <|-- NotDeliveredOrderState
+OrderState <|-- CancelledOrderState
+
+note right of OrderState
+  La clase Order mantiene una referencia a OrderState (_state)
+  y delega en él cada acción. Las transiciones inválidas usan
+  el comportamiento por defecto de la base (ConflictException),
+  evitando condicionales dispersos (OCP).
+end note
+
+@enduml

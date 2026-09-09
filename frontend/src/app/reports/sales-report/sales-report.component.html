@@ -1,0 +1,69 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Ventas agrupadas por mes</h1>
+  </div>
+
+  <div class="filters-card">
+    <h2 class="section-title">Rango de fechas</h2>
+    <div class="filters-row">
+      <div class="form-group">
+        <label class="form-label">Fecha desde</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="from" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha hasta</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="to" />
+        </div>
+      </div>
+
+      <button type="button" class="btn-primary" (click)="search()">
+        <i class="material-icons">search</i>
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="reports-list" *ngIf="reports.length > 0">
+    <div class="period-card" *ngFor="let report of reports">
+      <div class="period-header">
+        <div class="period-title">
+          <i class="material-icons">calendar_month</i>
+          {{ report.period }}
+        </div>
+        <span class="period-total">${{ getMonthTotal(report) }}</span>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th class="total-col">Total comprado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let customer of report.customers">
+              <td>{{ customer.customerName }}</td>
+              <td class="total-col">${{ customer.total }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grand-total-card">
+      <span class="grand-total-label">Total general</span>
+      <span class="grand-total-amount">${{ getGrandTotal() }}</span>
+    </div>
+  </div>
+</div>

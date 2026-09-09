@@ -1,0 +1,111 @@
+.home-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+/* Welcome */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.welcome-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--accent-gradient);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.welcome-icon i {
+  font-size: 32px;
+  color: white;
+}
+
+.welcome-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.welcome-subtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Quick links */
+.links-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.link-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.link-card:hover {
+  border-color: var(--accent-blue);
+  background-color: rgba(99, 102, 241, 0.05);
+  transform: translateX(4px);
+}
+
+.link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.link-icon i {
+  font-size: 20px;
+  color: var(--accent-blue);
+}
+
+.link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.link-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.link-description {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.link-arrow {
+  font-size: 20px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.link-card:hover .link-arrow {
+  color: var(--accent-blue);
+}

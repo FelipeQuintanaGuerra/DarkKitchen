@@ -1,0 +1,83 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Productos</h1>
+    <a routerLink="/products/create" class="btn-primary" *ngIf="isAdmin()">
+      <i class="material-icons">add</i>
+      Nuevo producto
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <div class="input-wrapper">
+      <i class="material-icons">search</i>
+      <input type="text" placeholder="Buscar por nombre" [(ngModel)]="searchName">
+    </div>
+    <button class="btn-search" (click)="search()">Buscar</button>
+    <button class="btn-search btn-secondary" (click)="loadProducts(); searchName = ''">Limpiar</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="cards-container" *ngIf="products.length > 0">
+    <div class="product-card" *ngFor="let product of products">
+      <div class="card-image-container">
+        <img *ngIf="product.imageUrls && product.imageUrls.length > 0"
+             [src]="getImageUrl(product.imageUrls[0])"
+             alt="{{ product.name }}"
+             class="card-image">
+        <div *ngIf="!product.imageUrls || product.imageUrls.length === 0" class="card-image-placeholder">
+          <i class="material-icons">image</i>
+        </div>
+      </div>
+
+      <div class="card-content">
+        <div class="card-header">
+          <div>
+            <h3 class="product-name">{{ product.name }}</h3>
+            <p class="product-code">Código: {{ product.code }}</p>
+          </div>
+          <span class="badge" [class]="getStatusBadgeClass(product.isActive)">
+            {{ getStatusText(product.isActive) }}
+          </span>
+        </div>
+
+        <p class="product-description">{{ product.description }}</p>
+
+        <div class="product-info">
+          <div class="info-item">
+            <span class="info-label">Línea:</span>
+            <span class="info-value">{{ product.commercialLineName }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Categoría:</span>
+            <span class="info-value">{{ product.categoryName }}</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="product-price">
+            <span class="price-label">Precio:</span>
+            <span class="price-value">${{ product.price }}</span>
+          </div>
+
+          <div class="card-actions" *ngIf="isAdmin()">
+            <a [routerLink]="['/products/edit', product.id]" class="btn-icon" title="Editar">
+              <i class="material-icons">edit</i>
+            </a>
+            <button class="btn-icon btn-delete" (click)="deleteProduct(product.id)" title="Eliminar">
+              <i class="material-icons">delete</i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="products.length === 0 && !errorMessage" class="empty-state">
+    <i class="material-icons">shopping_cart</i>
+    <p>No hay productos cargados</p>
+  </div>
+</div>
+

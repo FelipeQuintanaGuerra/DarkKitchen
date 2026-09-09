@@ -1,0 +1,17 @@
+<h2 mat-dialog-title>Confirmar</h2>
+
+<mat-dialog-content>
+  <p>
+    Tenés cambios sin guardar. Si salís ahora, se perderán los datos ingresados.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">
+    Cancelar
+  </button>
+
+  <button mat-raised-button color="warn" type="button" (click)="leave()">
+    Salir sin guardar
+  </button>
+</mat-dialog-actions>

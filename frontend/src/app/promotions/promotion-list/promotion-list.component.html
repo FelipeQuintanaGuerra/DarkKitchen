@@ -1,0 +1,134 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Promociones</h1>
+    <a routerLink="/promotions/create" class="btn-search" *ngIf="isAdmin()">
+      <i class="material-icons">add</i>
+      Nueva promoción
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <div class="input-wrapper">
+      <i class="material-icons">search</i>
+      <input type="text" placeholder="Buscar por nombre" [(ngModel)]="searchName" (keyup.enter)="search()">
+    </div>
+    <button class="btn-search" (click)="search()">Buscar</button>
+    <button class="btn-search btn-secondary" (click)="clearSearch()">Limpiar</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="cards-container" *ngIf="promotions.length > 0">
+    <div class="promotion-card" *ngFor="let promotion of promotions" (click)="openPromotion(promotion)">
+      <div class="card-content">
+        <div class="card-header">
+          <h3 class="promotion-name">{{ promotion.name }}</h3>
+          <span class="badge badge-discount">-{{ promotion.discount }}%</span>
+        </div>
+
+        <div class="promotion-info">
+          <div class="info-item">
+            <span class="info-label">Inicio:</span>
+            <span class="info-value">{{ formatDate(promotion.startDate) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Fin:</span>
+            <span class="info-value">{{ formatDate(promotion.endDate) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Línea:</span>
+            <span class="info-value">{{ promotion.commercialLineName }}</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="products-count">
+            <i class="material-icons">inventory_2</i>
+            <span>{{ promotion.productNames.length }} producto(s)</span>
+          </div>
+          <i class="material-icons chevron">chevron_right</i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="promotions.length === 0 && !errorMessage" class="empty-state">
+    <i class="material-icons">local_offer</i>
+    <p>No hay promociones activas</p>
+  </div>
+</div>
+
+<!-- Detail panel -->
+<div class="modal-overlay" *ngIf="selectedPromotion" (click)="closePromotion()">
+  <div class="modal-panel" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>{{ selectedPromotion.name }}</h2>
+        <p class="modal-subtitle">
+          {{ selectedPromotion.commercialLineName }} · -{{ selectedPromotion.discount }}%
+        </p>
+      </div>
+      <div class="header-actions">
+        <a class="btn-icon" [routerLink]="['/promotions/edit', selectedPromotion.id]" title="Editar promoción" *ngIf="isAdmin()">
+          <i class="material-icons">edit</i>
+        </a>
+        <button class="btn-icon" (click)="closePromotion()" title="Cerrar">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="modalError" class="error-message">
+      {{ modalError }}
+    </div>
+
+    <div class="modal-section">
+      <div class="section-header">
+        <h3>Productos de la promoción</h3>
+        <button class="btn-search" (click)="toggleAddProducts()" *ngIf="isAdmin()">
+          <i class="material-icons">add</i>
+          Agregar productos
+        </button>
+      </div>
+
+      <div class="product-list" *ngIf="productsInPromotion.length > 0">
+        <div class="product-row" *ngFor="let product of productsInPromotion">
+          <div class="product-row-info">
+            <span class="product-row-name">{{ product.name }}</span>
+            <span class="product-row-meta">Código: {{ product.code }} · ${{ product.price }}</span>
+          </div>
+          <button class="btn-icon btn-delete" (click)="removeProduct(product)" title="Quitar de la promoción" *ngIf="isAdmin()">
+            <i class="material-icons">delete</i>
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-list" *ngIf="productsInPromotion.length === 0">
+        Esta promoción no tiene productos.
+      </div>
+    </div>
+
+    <!-- Add products sub-panel -->
+    <div class="modal-section add-section" *ngIf="showAddProducts">
+      <h3>Productos disponibles ({{ selectedPromotion.commercialLineName }})</h3>
+
+      <div class="product-list" *ngIf="availableProducts.length > 0">
+        <div class="product-row" *ngFor="let product of availableProducts">
+          <div class="product-row-info">
+            <span class="product-row-name">{{ product.name }}</span>
+            <span class="product-row-meta">Código: {{ product.code }} · ${{ product.price }}</span>
+          </div>
+          <button class="btn-icon btn-add" (click)="addProduct(product)" title="Agregar a la promoción">
+            <i class="material-icons">add</i>
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-list" *ngIf="availableProducts.length === 0">
+        No hay más productos disponibles en esta línea comercial.
+      </div>
+    </div>
+  </div>
+</div>

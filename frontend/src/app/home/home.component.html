@@ -1,0 +1,22 @@
+<div class="home-container">
+  <div class="welcome-section">
+    <div class="welcome-icon">
+      <i class="material-icons">restaurant</i>
+    </div>
+    <h1 class="welcome-title">Bienvenido, {{ userName }}</h1>
+    <p class="welcome-subtitle">¿Qué querés hacer hoy?</p>
+  </div>
+
+  <div class="links-grid" *ngIf="quickLinks.length > 0">
+    <a *ngFor="let link of quickLinks" [routerLink]="link.route" class="link-card">
+      <div class="link-icon">
+        <i class="material-icons">{{ link.icon }}</i>
+      </div>
+      <div class="link-text">
+        <span class="link-label">{{ link.label }}</span>
+        <span class="link-description">{{ link.description }}</span>
+      </div>
+      <i class="material-icons link-arrow">chevron_right</i>
+    </a>
+  </div>
+</div>

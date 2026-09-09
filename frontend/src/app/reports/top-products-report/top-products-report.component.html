@@ -1,0 +1,72 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Top 5 productos más vendidos</h1>
+  </div>
+
+  <div class="filters-card">
+    <h2 class="section-title">Rango de fechas</h2>
+    <div class="filters-row">
+      <div class="form-group">
+        <label class="form-label">Fecha desde</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="from" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fecha hasta</label>
+        <div class="input-wrapper">
+          <i class="material-icons">calendar_today</i>
+          <input type="date" [(ngModel)]="to" />
+        </div>
+      </div>
+
+      <button type="button" class="btn-primary" (click)="search()">
+        <i class="material-icons">search</i>
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="table-container" *ngIf="products.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th class="rank-col">#</th>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Cantidad vendida</th>
+          <th>Imágenes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of products; let i = index">
+          <td class="rank-col">
+            <span class="rank-badge">{{ i + 1 }}</span>
+          </td>
+          <td class="code-col">{{ product.code }}</td>
+          <td>{{ product.name }}</td>
+          <td>
+            <span class="qty-badge">{{ product.quantity }}</span>
+          </td>
+          <td>
+            <span *ngIf="product.images.length === 0" class="no-image">Sin imágenes</span>
+            <div *ngIf="product.images.length > 0" class="images-row">
+              <img
+                *ngFor="let imageUrl of product.images"
+                [src]="imageUrl"
+                [alt]="product.name"
+                class="product-thumb"
+              />
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+@startuml 03-implementacion
+' Diagrama de implementación (componentes) — DarkKitchen
+' Muestra los assemblies (.dll) de la solución, sus dependencias de compilación
+' y los componentes externos (EF Core / SQL Server, plugins de importación).
+
+skinparam componentStyle uml2
+skinparam linetype ortho
+left to right direction
+
+title Diagrama de implementación — DarkKitchen (.NET 8)
+
+' ===================== Contratos (interfaces) =====================
+package "Contratos" {
+    component [IBussinesLogic.dll] as IBL
+    component [IRepository.dll]    as IRepo
+    component [IImporters.dll]     as IImp
+}
+
+' ===================== Núcleo de dominio =====================
+package "Núcleo" {
+    component [Domain.dll] as Domain
+    component [DTOs.dll]   as DTOs
+}
+
+' ===================== Implementaciones =====================
+package "Implementación" {
+    component [WebApi.dll] as WebApi
+    component [ServiceFactory.dll] as SF
+    component [BusinessLogic.dll] as BL
+    component [Repository.dll] as Repo
+}
+
+' ===================== Externos =====================
+database "SQL Server\n(DarkKitchen)" as DB
+node "Plugins de importación\n(*.dll en /plugins)" as Plugins
+
+' ---------- Dependencias de WebApi ----------
+WebApi ..> IBL  : usa servicios
+WebApi ..> SF   : composition root (DI)
+WebApi ..> Repo : registra DbContext
+
+' ---------- ServiceFactory (wiring DI) ----------
+SF ..> IBL
+SF ..> BL    : registra impl.
+SF ..> IRepo
+SF ..> Repo  : registra impl.
+
+' ---------- BusinessLogic ----------
+BL ..|> IBL  : implementa
+BL ..> IRepo : depende de
+BL ..> IImp  : carga importadores
+BL ..> Domain
+
+' ---------- Repository (EF Core) ----------
+Repo ..|> IRepo : implementa
+Repo ..> Domain
+Repo ..> DB     : EF Core / SqlServer
+
+' ---------- Contratos -> núcleo ----------
+IBL ..> Domain
+IBL ..> DTOs
+IRepo ..> Domain
+IRepo ..> DTOs
+DTOs ..> Domain
+
+' ---------- Plugins ----------
+Plugins ..|> IImp : implementan IProductImporter
+BL ..> Plugins   : Assembly.LoadFile (reflexión)
+
+note bottom of WebApi
+  ASP.NET Core (Kestrel). Expone la API REST y
+  sirve archivos estáticos desde wwwroot/images/products.
+end note
+
+note bottom of Plugins
+  Cargados dinámicamente en tiempo de ejecución por
+  AssemblyLoader (Assembly.LoadFile + Activator.CreateInstance).
+  No son referencias de compilación.
+end note
+
+@enduml

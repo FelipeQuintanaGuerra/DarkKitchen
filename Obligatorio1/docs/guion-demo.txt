@@ -1,0 +1,178 @@
+==========================================================================
+ GUIÓN DE DEMO - OBLIGATORIO 1 (Diseño de Aplicaciones 2)
+ Foco: Backend + Importers (Reflection / Plugins)
+==========================================================================
+
+OBJETIVO: mostrar que el sistema funciona end-to-end y, sobre todo, que la
+importación por plugins es extensible sin recompilar el core.
+
+Endpoints reales que vas a usar:
+  POST   https://localhost:7273/api/session/login        (login)
+  GET    https://localhost:7273/api/importers            (listar importers) [Admin]
+  POST   https://localhost:7273/api/importers/import     (importar)         [Admin]
+  GET    https://localhost:7273/api/products             (ver productos)
+  DELETE https://localhost:7273/api/session              (logout, header Authorization)
+
+Header de autenticación: Authorization: <token-guid-devuelto-en-login>
+
+
+==========================================================================
+ 0. ANTES DE EMPEZAR (CHECKLIST - hacelo con la cámara apagada)
+==========================================================================
+[ ] Base de datos levantada y con migraciones aplicadas (correr el script
+    de BD / dotnet ef database update).
+[ ] App corriendo: dotnet run --project WebApi  (o desde el IDE).
+[ ] Swagger abierto en https://localhost:7273/swagger  (o Postman listo).
+[ ] Carpeta Plugins/ ubicada: WebApi/bin/.../Plugins  (donde se copian los
+    DLLs de importers). Tener a mano el DLL del importer y un archivo de
+    datos de ejemplo (el .csv/.json/.xml que lee tu importer).
+[ ] Credenciales de un usuario Admin a mano (para login).
+[ ] Tener abierto en el editor, en pestañas, estos archivos por si piden
+    ver código en vivo:
+      - IImporters/IProductImporter.cs
+      - BusinessLogic/Reflection/AssemblyLoader.cs
+      - BusinessLogic/Services/ImporterService.cs
+      - WebApi/Controllers/ImporterController.cs
+      - ServiceFactory/ServiceFactory.cs
+
+
+==========================================================================
+ 1. PRESENTACIÓN (30-45 seg, hablado, sin tocar nada)
+==========================================================================
+Decir algo como:
+  "Vamos a mostrar el backend de DarkKitchen. Está organizado en capas
+   (WebApi -> BusinessLogic -> Repository -> Domain), todo desacoplado por
+   interfaces e inyección de dependencias centralizada en ServiceFactory.
+   La parte que vamos a destacar es la importación de productos mediante
+   plugins cargados por reflection, que permite agregar nuevos formatos de
+   importación sin recompilar el sistema."
+
+
+==========================================================================
+ 2. LOGIN COMO ADMIN  (muestra autenticación + autorización)
+==========================================================================
+PASO: POST /api/session/login  con body:
+      { "email": "<admin@...>", "password": "<...>" }
+MOSTRAR: la respuesta devuelve el usuario con su TOKEN (Guid).
+DECIR: "El token identifica la sesión. Los endpoints de importación están
+        protegidos con [AuthorizationFilter([Role.Admin])], así que sin un
+        token de Admin no se puede importar."
+COPIAR el token para usarlo en el header Authorization de los próximos
+        llamados.
+
+(OPCIONAL - muestra que la seguridad funciona)
+PASO: llamar GET /api/importers SIN token o con un token no-Admin.
+MOSTRAR: responde 401/403.
+DECIR: "El filtro de autorización corta la request antes de ejecutar la
+        acción."
+
+
+==========================================================================
+ 3. LISTAR IMPORTERS DISPONIBLES  (muestra reflection en acción)
+==========================================================================
+PASO: GET /api/importers   (con header Authorization: <token-admin>)
+MOSTRAR: la lista de nombres de importers (ej: ["CSV Importer", ...]).
+DECIR: "Esta lista NO está hardcodeada. El AssemblyLoader escanea la
+        carpeta Plugins/, carga cada DLL con Assembly.LoadFile, busca las
+        clases que implementan IProductImporter y las instancia por
+        reflection. Por eso lo que ven acá es exactamente lo que hay en la
+        carpeta de plugins."
+
+(Si te lo piden) abrir AssemblyLoader.cs y señalar:
+   - Directory.GetFiles(_pluginsPath, "*.dll")
+   - typeof(IProductImporter).IsAssignableFrom(t)
+   - Activator.CreateInstance(type)
+
+
+==========================================================================
+ 4. ESTADO INICIAL DE PRODUCTOS  (para comparar después)
+==========================================================================
+PASO: GET /api/products
+MOSTRAR: el catálogo actual (cuántos productos hay AHORA).
+DECIR: "Tomemos nota de cuántos productos hay antes de importar."
+
+
+==========================================================================
+ 5. IMPORTAR PRODUCTOS  (el momento principal de la demo)
+==========================================================================
+PASO: POST /api/importers/import?importerName=<NOMBRE>&filePath=<RUTA>
+      con header Authorization: <token-admin>
+      - importerName = uno de los nombres del paso 3
+      - filePath = ruta al archivo de datos de ejemplo
+MOSTRAR: la respuesta { "imported": N }.
+DECIR: "El service tomó el importer por nombre, le pidió los productos del
+        archivo, y por cada uno: validó que el código no exista, creó o
+        reutilizó la línea comercial y la categoría, procesó y copió las
+        imágenes válidas a wwwroot/images/products, y persistió el Product."
+
+PASO: GET /api/products otra vez.
+MOSTRAR: aparecen los N productos nuevos (comparar con el paso 4).
+DECIR: "Los productos importados ya están en el catálogo, con sus imágenes
+        guardadas y renombradas con un Guid único."
+
+(OPCIONAL - mostrar una imagen importada)
+Abrir en el navegador la URL de una imagen del producto para probar que se
+copió bien.
+
+
+==========================================================================
+ 6. DEMO DE VALIDACIONES / REGLAS DE NEGOCIO  (muestra robustez)
+==========================================================================
+Mostrar al menos UNA validación fallando, para demostrar que el import no
+acepta cualquier cosa:
+
+OPCIÓN A - Código duplicado:
+  Volvé a importar el MISMO archivo.
+  MOSTRAR: error "Ya existe un producto con código '...'".
+  DECIR: "No permite duplicar productos por código."
+
+OPCIÓN B - Producto sin imágenes válidas:
+  Usar un archivo cuyo producto no tenga imágenes o tengan >500KB / no .jpg.
+  MOSTRAR: error "El producto '...' no tiene imágenes válidas."
+  DECIR: "Toda alta de producto exige al menos una imagen válida
+          (.jpg, <=500KB)."
+
+(Si te preguntan por transaccionalidad acá, ver D3 en defensa-obligatorio.txt:
+ reconocer que hoy el import no es transaccional y cómo se resolvería.)
+
+
+==========================================================================
+ 7. EXTENSIBILIDAD: AGREGAR UN IMPORTER NUEVO  (el "wow" de la defensa)
+==========================================================================
+Esto es lo que más valoran: demostrar Open/Closed en vivo.
+
+Si tenés un segundo importer (otro formato) ya compilado como DLL:
+PASO: copiar ese DLL a la carpeta Plugins/.
+PASO: GET /api/importers de nuevo.
+MOSTRAR: ahora aparece el importer nuevo en la lista, SIN haber recompilado
+         ni reiniciado el core (según cómo cargues; si recargás, mencionarlo).
+DECIR: "Agregamos soporte para un formato nuevo solo dejando un DLL en la
+        carpeta de plugins. No tocamos ni recompilamos el sistema
+        principal: esto es el principio Open/Closed."
+
+Si NO vas a hacerlo en vivo, al menos EXPLICARLO:
+  "Para agregar un formato nuevo: implemento IProductImporter en un
+   proyecto que solo referencia IImporters, compilo el DLL y lo dejo en
+   Plugins/. El sistema lo descubre por reflection."
+  (Y mostrar IProductImporter.cs: son solo Name + GetProducts(path).)
+
+
+==========================================================================
+ 8. CIERRE  (15-20 seg)
+==========================================================================
+DECIR:
+  "En resumen: backend en capas desacoplado por interfaces e inyección de
+   dependencias, seguridad por roles en los endpoints, patrón Repository, y
+   una importación extensible por plugins vía reflection que cumple
+   Open/Closed y DIP. Quedamos a las preguntas."
+
+
+==========================================================================
+ RECORDATORIOS RÁPIDOS DURANTE LA DEMO
+==========================================================================
+- Hablá MIENTRAS esperás las respuestas (no te quedes en silencio).
+- Si algo falla, no te bloquees: explicá qué DEBERÍA pasar y seguí.
+- Tené el archivo defensa-obligatorio.txt abierto en otra pantalla para las
+  preguntas (sobre todo D3 transaccionalidad y P2 cómo agregar importer).
+- Si piden ver código, ya tenés las pestañas abiertas (ver checklist 0).
+==========================================================================

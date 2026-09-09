@@ -1,0 +1,74 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/promotions" class="btn-back">
+      <i class="material-icons">arrow_back</i>
+    </a>
+    <h1>Crear promoción</h1>
+  </div>
+
+  <div class="form-card">
+    <form [formGroup]="promotionForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label>Nombre</label>
+        <div class="input-wrapper">
+          <i class="material-icons">local_offer</i>
+          <input type="text" formControlName="name" placeholder="Nombre de la promoción">
+        </div>
+        <span class="field-error" *ngIf="promotionForm.get('name')?.touched && promotionForm.get('name')?.hasError('required')">El nombre es requerido</span>
+        <span class="field-error" *ngIf="promotionForm.get('name')?.touched && promotionForm.get('name')?.hasError('minlength')">Mínimo 5 caracteres</span>
+        <span class="field-error" *ngIf="promotionForm.get('name')?.touched && promotionForm.get('name')?.hasError('maxlength')">Máximo 25 caracteres</span>
+      </div>
+
+      <div class="form-group">
+        <label>Línea comercial</label>
+        <div class="input-wrapper">
+          <i class="material-icons">category</i>
+          <select formControlName="commercialLineId">
+            <option value="" disabled>Seleccioná una línea comercial</option>
+            <option *ngFor="let line of commercialLines" [value]="line.id">{{ line.name }}</option>
+          </select>
+        </div>
+        <span class="field-error" *ngIf="promotionForm.get('commercialLineId')?.touched && promotionForm.get('commercialLineId')?.hasError('required')">La línea comercial es requerida</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de inicio</label>
+          <div class="input-wrapper">
+            <i class="material-icons">event</i>
+            <input type="date" formControlName="startDate">
+          </div>
+          <span class="field-error" *ngIf="promotionForm.get('startDate')?.touched && promotionForm.get('startDate')?.hasError('required')">La fecha de inicio es requerida</span>
+        </div>
+
+        <div class="form-group">
+          <label>Fecha de fin</label>
+          <div class="input-wrapper">
+            <i class="material-icons">event</i>
+            <input type="date" formControlName="endDate">
+          </div>
+          <span class="field-error" *ngIf="promotionForm.get('endDate')?.touched && promotionForm.get('endDate')?.hasError('required')">La fecha de fin es requerida</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descuento (%)</label>
+        <div class="input-wrapper">
+          <i class="material-icons">percent</i>
+          <input type="number" formControlName="discount" placeholder="0" min="1" max="99">
+        </div>
+        <span class="field-error" *ngIf="promotionForm.get('discount')?.touched && promotionForm.get('discount')?.hasError('required')">El descuento es requerido</span>
+        <span class="field-error" *ngIf="promotionForm.get('discount')?.touched && (promotionForm.get('discount')?.hasError('min') || promotionForm.get('discount')?.hasError('max'))">El descuento debe estar entre 1 y 99</span>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <div class="form-actions">
+        <a routerLink="/promotions" class="btn-cancel">Cancelar</a>
+        <button type="submit" class="btn-primary">Crear promoción</button>
+      </div>
+    </form>
+  </div>
+</div>

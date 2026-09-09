@@ -1,0 +1,143 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Detalle de pedido</h1>
+  </div>
+
+  <div *ngIf="showSearch" class="search-section">
+    <div class="input-wrapper">
+      <i class="material-icons">search</i>
+      <input
+        type="text"
+        [(ngModel)]="orderId"
+        placeholder="Ingresá el identificador del pedido"
+        (keyup.enter)="search()"
+      />
+    </div>
+    <button type="button" class="btn-primary" (click)="search()">Buscar</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="order" class="order-content">
+
+    <div class="section-card">
+      <h2 class="section-title">Información general</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="info-label">Número</span>
+          <span class="info-value">{{ order.orderNumber }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Cliente</span>
+          <span class="info-value">{{ order.customerName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value">{{ order.customerEmail }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Fecha</span>
+          <span class="info-value">{{ order.createdAt | date:'short' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Estado</span>
+          <span class="status-badge">{{ getStatusName(order.status) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2 class="section-title">Dirección de entrega</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="info-label">Calle</span>
+          <span class="info-value">{{ order.street }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Número de puerta</span>
+          <span class="info-value">{{ order.doorNumber }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Apartamento</span>
+          <span class="info-value">{{ order.apartment || '-' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2 class="section-title">Envío</h2>
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="info-label">Tipo</span>
+          <span class="info-value">{{ order.shippingType }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Costo</span>
+          <span class="info-value">${{ order.shippingCost }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2 class="section-title">Productos</h2>
+      <div class="table-container" *ngIf="order.lines.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cantidad</th>
+              <th>Precio unitario</th>
+              <th>Descuento / promoción</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of order.lines">
+              <td>{{ line.productName }}</td>
+              <td>{{ line.quantity }}</td>
+              <td>${{ line.unitPrice }}</td>
+              <td>
+                <span *ngIf="line.discount > 0" class="discount-badge">{{ line.discount*100 }}% aplicado</span>
+                <span *ngIf="line.discount === 0" class="no-discount">Sin promoción</span>
+              </td>
+              <td>${{ line.subtotal }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div *ngIf="order.lines.length === 0" class="empty-state">
+        <i class="material-icons">shopping_cart</i>
+        <p>Sin productos</p>
+      </div>
+    </div>
+
+    <div class="section-card totals-card">
+      <h2 class="section-title">Totales</h2>
+      <div class="totals-grid">
+        <div class="total-row">
+          <span class="info-label">Productos</span>
+          <span class="info-value">${{ order.subtotal }}</span>
+        </div>
+        <div class="total-row">
+          <span class="info-label">Costo de envío</span>
+          <span class="info-value">${{ order.shippingCost }}</span>
+        </div>
+        <div class="total-row total-divider">
+          <span class="info-label">Subtotal</span>
+          <span class="info-value">${{ subtotalWithShipping }}</span>
+        </div>
+        <div class="total-row">
+          <span class="info-label">IVA (22%)</span>
+          <span class="info-value">${{ iva }}</span>
+        </div>
+        <div class="total-row total-final">
+          <span class="total-label">Total</span>
+          <span class="total-amount">${{ order.total }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

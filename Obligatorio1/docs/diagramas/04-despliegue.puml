@@ -1,0 +1,49 @@
+@startuml 04-despliegue
+' Diagrama de despliegue — DarkKitchen
+' Muestra los nodos físicos/lógicos, los artefactos desplegados y los protocolos de comunicación.
+
+skinparam linetype ortho
+title Diagrama de despliegue — DarkKitchen
+
+node "Cliente\n(Navegador / Cliente REST)" as Client {
+    artifact "Frontend / Postman" as FE
+}
+
+node "Servidor de aplicación\n(.NET 8 · Kestrel)" as AppServer {
+    artifact "WebApi.dll" as WebApi
+    artifact "BusinessLogic.dll" as BL
+    artifact "Repository.dll" as Repo
+    artifact "ServiceFactory.dll" as SF
+    artifact "Domain.dll / DTOs.dll" as Core
+
+    folder "wwwroot/images/products" as Images
+    folder "plugins/ (*.dll importadores)" as Plugins
+}
+
+node "Servidor de base de datos\n(Microsoft SQL Server)" as DbServer {
+    database "DarkKitchen" as DB
+}
+
+' ===================== Comunicaciones =====================
+Client --> WebApi : HTTP/HTTPS\n(REST / JSON · multipart para imágenes)
+WebApi ..> BL
+BL ..> Repo
+Repo --> DB : TCP 1433\n(EF Core · SqlClient)
+
+WebApi --> Images : lee/escribe\narchivos de imagen
+BL --> Plugins : Assembly.LoadFile\n(carga importadores)
+
+note right of AppServer
+  Todos los assemblies se despliegan juntos
+  en el mismo host (monolito en capas).
+  Cadena de conexión en appsettings:
+  Server=...;Database=DarkKitchen;...
+end note
+
+note bottom of Plugins
+  Los .dll de importación se colocan en la carpeta
+  de plugins y se descubren en tiempo de ejecución
+  por reflexión (IProductImporter).
+end note
+
+@enduml

@@ -1,0 +1,93 @@
+<nav class="navbar" *ngIf="isLoggedIn">
+  <div class="navbar-brand">
+    <i class="material-icons">restaurant</i>
+    <span>{{ title }}</span>
+  </div>
+
+  <div class="navbar-links">
+    <a
+      routerLink="/products"
+      routerLinkActive="active"
+      *ngIf="userRole === 'Admin' || userRole === 'Client'"
+      >Productos</a
+    >
+    <a
+      routerLink="/promotions"
+      routerLinkActive="active"
+      *ngIf="userRole === 'Admin' || userRole === 'Client'"
+      >Promociones</a
+    >
+
+    <div class="dropdown">
+      <span>Pedidos</span>
+      <div class="dropdown-content">
+        <a routerLink="/orders/create" *ngIf="userRole === 'Client'"
+          >Crear pedido</a
+        >
+        <a routerLink="/orders/my-orders" *ngIf="userRole === 'Client'"
+          >Mis pedidos</a
+        >
+        <a
+          routerLink="/orders/filtered"
+          *ngIf="userRole === 'Dispatcher' || userRole === 'Admin'"
+        >
+          Pedidos filtrados
+        </a>
+        <a
+          routerLink="/orders/detail"
+          *ngIf="userRole === 'Dispatcher' || userRole === 'Admin'"
+          >Detalle pedido</a
+        >
+      </div>
+    </div>
+
+    <a
+      routerLink="/users"
+      routerLinkActive="active"
+      *ngIf="userRole === 'Admin'"
+      >Usuarios</a
+    >
+    <a
+      routerLink="/shipping-types"
+      routerLinkActive="active"
+      *ngIf="userRole === 'Admin'"
+      >Tipos de Envío</a
+    >
+    <a
+      routerLink="/importers"
+      routerLinkActive="active"
+      *ngIf="userRole === 'Admin'"
+      >Importadores</a
+    >
+
+    <div class="dropdown" *ngIf="isLoggedIn">
+      <span>Reportes</span>
+      <div class="dropdown-content">
+        <a routerLink="/reports/top-products">Top productos</a>
+        <a routerLink="/reports/sales">Ventas agrupadas</a>
+      </div>
+    </div>
+
+    <a
+      routerLink="/audits"
+      routerLinkActive="active"
+      *ngIf="userRole === 'Admin'"
+      >Auditoría</a
+    >
+  </div>
+
+  <div class="navbar-user">
+    <span class="user-info" *ngIf="user">
+      <i class="material-icons">person</i>
+      {{ user.name }}
+    </span>
+    <button class="logout-btn" (click)="logout()">
+      <i class="material-icons">logout</i>
+      Salir
+    </button>
+  </div>
+</nav>
+
+<div class="content">
+  <router-outlet></router-outlet>
+</div>
