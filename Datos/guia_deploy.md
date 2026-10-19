@@ -24,7 +24,7 @@ cd DarkKitchen
 Deben estar en:
 
 ```text
-Obligatorio1/WebApi/wwwroot/images/products
+Backend/WebApi/wwwroot/images/products
 ```
 
 Con estos nombres:
@@ -82,7 +82,7 @@ Esperar aproximadamente 30 segundos para que SQL Server termine de iniciar.
 Archivo:
 
 ```text
-Obligatorio1/WebApi/appsettings.Development.json
+Backend/WebApi/appsettings.Development.json
 ```
 
 Contenido:
@@ -98,7 +98,7 @@ Contenido:
 ### Ejecutar migraciones
 
 ```powershell
-cd Obligatorio1
+cd Backend
 
 dotnet ef database update `
   -p Repository\Repository.csproj `
@@ -110,7 +110,7 @@ cd ..
 ### Copiar script al contenedor
 
 ```powershell
-docker cp Obligatorio1/database-with-test-data.sql sql:/tmp/database-with-test-data.sql
+docker cp Datos/database-with-test-data.sql sql:/tmp/database-with-test-data.sql
 ```
 
 ### Ejecutar script
@@ -133,7 +133,7 @@ docker exec -it sql /opt/mssql-tools18/bin/sqlcmd `
 Archivo:
 
 ```text
-Obligatorio1/WebApi/appsettings.Development.json
+Backend/WebApi/appsettings.Development.json
 ```
 
 Contenido:
@@ -149,7 +149,7 @@ Contenido:
 ### Ejecutar migraciones
 
 ```powershell
-cd Obligatorio1
+cd Backend
 
 dotnet ef database update `
   -p Repository\Repository.csproj `
@@ -175,7 +175,7 @@ Trust Server Certificate: True
 Abrir:
 
 ```text
-Obligatorio1/database-with-test-data.sql
+Datos/database-with-test-data.sql
 ```
 
 y ejecutarlo.
@@ -187,7 +187,7 @@ y ejecutarlo.
 Desde la raíz del repositorio:
 
 ```powershell
-docker build --rm -f Obligatorio1/WebApi/Dockerfile -t deploy/api:latest .
+docker build --rm -f Backend/WebApi/Dockerfile -t deploy/api:latest .
 ```
 
 ---
@@ -219,7 +219,7 @@ Now listening on: http://[::]:5222
 ## 9. Build frontend
 
 ```powershell
-cd frontend
+cd Frontend
 
 docker build . -t deploy/frontend:latest
 ```
